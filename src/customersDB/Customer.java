@@ -12,6 +12,9 @@ public class Customer {
 	private String email;
 	private String company;
 	private String position;
+	public Customer() {
+		
+	}
 	
 	public Customer(int id, String title, String firstName, String lastName,
 			String streetAddress, String city, String state, String zip,
