@@ -5,6 +5,7 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,6 +14,51 @@ import java.util.Set;
 
 public class CustomerDao {
 	public Set<Integer> ids;
+	public String getTotal (){
+		Connection con = null;
+		ResultSet rs = null;
+		PreparedStatement sql = null;
+		String res = "";
+		try {
+			Driver myDriver = new oracle.jdbc.driver.OracleDriver();
+			DriverManager.registerDriver(myDriver);
+			con = DriverManager.getConnection("jdbc:oracle:thin:ora1/ora1@localhost:1521:orcl");
+			sql = con.prepareStatement("SELECT a.Number_Of_Customers,"
+					+ " b.NUMBER_OF_States,"
+					+ " c.Number_of_Companies"
+					+ " FROM"
+					+ "   (SELECT COUNT( DISTINCT customerid) AS Number_Of_Customers FROM customers"
+					+ "   ) a,"
+					+ "   (SELECT COUNT (DISTINCT stateid) AS NUMBER_OF_States FROM customers"
+					+ "   ) b,"
+					+ "   (SELECT COUNT (DISTINCT companyid) AS Number_of_Companies FROM customers"
+					+ "  ) c ");
+			rs = sql.executeQuery();
+			ResultSetMetaData rsmd = rs.getMetaData(); 
+			int count = rsmd.getColumnCount();
+			for (int i=1;i<=count;i++) {
+				res = res+ rsmd.getColumnLabel(i)+ "\t";
+			}
+			res += "\n";
+			while (rs.next()) {
+				for (int i=1;i<=count;i++) {
+					res = res+ rs.getString(i)+ "\t";
+				}
+				res += "\n";
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				sql.close();
+				con.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		return res;
+	}
 
 	public List<Customer> getRecordLastName(String lastName) {
 		ids = new HashSet<Integer>();
@@ -92,32 +138,53 @@ public class CustomerDao {
 			con = DriverManager.getConnection("jdbc:oracle:thin:ora1/ora1@localhost:1521:orcl");
 
 			// Insert into companies and get company ID
+			sql = con.prepareStatement("select coalesce ((select companyid from Companies where company = ?),-1) from dual");
+			int companyId = select(sql, c.getCompany());
+			if ( companyId ==-1) {
 			sql = con.prepareStatement("Insert into Companies (company) values (?)");
 			insert(con, sql, c.getCompany());
-
 			sql = con.prepareStatement("select companyid from Companies where company = ?");
-			int companyId = select(sql, c.getCompany());
+			companyId = select(sql, c.getCompany());
+			}
+
+			
 
 			// Insert into cities and get company ID
-			sql = con.prepareStatement("Insert into CITIES (city) values (?)");
-			insert(con, sql, c.getCity());
-
-			sql = con.prepareStatement("select cityid from Cities where city = ?");
+			sql = con.prepareStatement("select coalesce ((select cityid from Cities where city = ?),-1) from dual");
 			int cityId = select(sql, c.getCity());
+			if (cityId ==-1 ) {
+				sql = con.prepareStatement("Insert into CITIES (city) values (?)");
+				insert(con, sql, c.getCity());
 
-			// Insert into states and get company ID
-			sql = con.prepareStatement("Insert into States (state) values (?)");
-			insert(con, sql, c.getState());
+				sql = con.prepareStatement("select cityid from Cities where city = ?");
+				cityId = select(sql, c.getCity());
+			}
+			
 
-			sql = con.prepareStatement("select stateid from States where state = ?");
+			// Insert into states and get state ID
+			sql = con.prepareStatement("select coalesce ((select stateid from States where state = ?),-1) from dual");
 			int stateId = select(sql, c.getState());
+			if (stateId ==-1 ) {
+				sql = con.prepareStatement("Insert into States (state) values (?)");
+				insert(con, sql, c.getState());
 
-			// Insert into positions and get company ID
-			sql = con.prepareStatement("Insert into Positions (position) values (?)");
-			insert(con, sql, c.getPosition());
+				sql = con.prepareStatement("select stateid from States where state = ?");
+				stateId = select(sql, c.getState());
+			}
+			
 
-			sql = con.prepareStatement("select positionid from Positions where position = ?");
+			// Insert into positions and get position ID
+			sql = con.prepareStatement("select coalesce ((select positionid from Positions where position = ?),-1) from dual");
 			int positionId = select(sql, c.getPosition());
+			
+			if (positionId ==1) {
+				sql = con.prepareStatement("Insert into Positions (position) values (?)");
+				insert(con, sql, c.getPosition());
+
+				sql = con.prepareStatement("select positionid from Positions where position = ?");
+				positionId = select(sql, c.getPosition());
+			}
+			
 			
 
 			sql = con.prepareStatement("Insert into CUSTOMERS values(?,?,?,?,?,?,?,?,?,?,"

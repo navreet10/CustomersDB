@@ -9,8 +9,13 @@ public class CustomerApp {
 		Scanner in = new Scanner(System.in);
 		String response= "";
 		while(!response.equals("Q")) {
-			System.out.println("Please enter last name to search or press Q to exit:");
+			System.out.println("Please enter last name to search or enter total or enter Q to exit:");
 			response = in.next();
+			if (response.equals("total")) {
+				System.out.println(dao.getTotal());
+				in.nextLine();
+				continue;
+			}
 			in.nextLine();
 			List<Customer> list =dao.getRecordLastName(response);
 			if (list.size() ==0) {
